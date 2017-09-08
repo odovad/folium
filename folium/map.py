@@ -37,8 +37,6 @@ _default_js = [
      'https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js'),
     ('awesome_markers',
      'https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js'),  # noqa
-    ('marker_cluster',
-     'https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.0.0/leaflet.markercluster.js'),  # noqa
     ]
 
 _default_css = [
@@ -52,10 +50,6 @@ _default_css = [
      'https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css'),  # noqa
     ('awesome_markers_css',
      'https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css'),  # noqa
-    ('marker_cluster_default_css',
-     'https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.0.0/MarkerCluster.Default.css'),  # noqa
-    ('marker_cluster_css',
-     'https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.0.0/MarkerCluster.css'),  # noqa
     ('awesome_rotate_css',
      'https://rawgit.com/python-visualization/folium/master/folium/templates/leaflet.awesome.rotate.css'),  # noqa
     ]
@@ -417,7 +411,7 @@ class TileLayer(Layer):
         Adds the layer as an optional overlay (True) or the base layer (False).
     control : bool, default True
         Whether the Layer will be included in LayerControls.
-    subdomains: string, default 'abc'
+    subdomains: list of strings, default ['abc']
         Subdomains of the tile service.
     """
     def __init__(self, tiles='OpenStreetMap', min_zoom=1, max_zoom=18,
@@ -431,12 +425,15 @@ class TileLayer(Layer):
         self._name = 'TileLayer'
         self._env = ENV
 
-        self.min_zoom = min_zoom
-        self.max_zoom = max_zoom
-        self.no_wrap = no_wrap
-        self.subdomains = subdomains
-
-        self.detect_retina = detect_retina
+        options = {
+            'minZoom': min_zoom,
+            'maxZoom': max_zoom,
+            'noWrap': no_wrap,
+            'attribution': attr,
+            'subdomains': subdomains,
+            'detectRetina': detect_retina,
+        }
+        self.options = json.dumps(options, sort_keys=True, indent=2)
 
         self.tiles = ''.join(tiles.lower().strip().split())
         if self.tiles in ('cloudmade', 'mapbox') and not API_key:
@@ -463,16 +460,8 @@ class TileLayer(Layer):
         {% macro script(this, kwargs) %}
             var {{this.get_name()}} = L.tileLayer(
                 '{{this.tiles}}',
-                {
-                    maxZoom: {{this.max_zoom}},
-                    minZoom: {{this.min_zoom}},
-                    noWrap: {{this.no_wrap.__str__().lower()}},
-                    attribution: '{{this.attr}}',
-                    detectRetina: {{this.detect_retina.__str__().lower()}},
-                    subdomains: '{{this.subdomains}}'
-                    }
+                {{ this.options }}
                 ).addTo({{this._parent.get_name()}});
-
         {% endmacro %}
         """)  # noqa
 
@@ -694,8 +683,10 @@ class Popup(Element):
         True if the popup is a template that needs to the rendered first.
     max_width: int, default 300
         The maximal width of the popup.
+    max_height: int, default None
+        The maximal height of the popup, if set Popup will be scrallable.
     """
-    def __init__(self, html=None, parse_html=False, max_width=300):
+    def __init__(self, html=None, parse_html=False, max_width=300, max_height=None):
         super(Popup, self).__init__()
         self._name = 'Popup'
         self.header = Element()
@@ -716,7 +707,11 @@ class Popup(Element):
         self.max_width = max_width
 
         self._template = Template(u"""
-            var {{this.get_name()}} = L.popup({maxWidth: '{{this.max_width}}'});
+            var {{this.get_name()}} = L.popup({maxWidth: '{{this.max_width}}'
+                                              {% if max_height %}
+                                                , maxHeight: '{{this.max_height}}'
+                                              {% endif %}
+                                               });
 
             {% for name, element in this.html._children.items() %}
                 var {{name}} = $('{{element.render(**kwargs).replace('\\n',' ')}}')[0];
