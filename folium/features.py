@@ -16,10 +16,12 @@ from branca.colormap import LinearColormap
 from branca.element import (CssLink, Element, Figure, JavascriptLink, MacroElement)  # noqa
 from branca.utilities import (_locations_tolist, _parse_size, image_to_url, iter_points, none_max, none_min)  # noqa
 
-from folium.map import FeatureGroup, Icon, Layer, Marker
+from folium.map import FeatureGroup, Icon, Layer, Popup, Marker
 from folium.utilities import _parse_path, _parse_wms
 
 from jinja2 import Template
+
+import requests
 
 from six import binary_type, text_type
 
@@ -108,7 +110,7 @@ class WmsTileLayer(Layer):
     attr : str, default None
         The attribution of the service.
         Will be displayed in the bottom right corner.
-    overlay : bool, default False
+    overlay : bool, default True
         Adds the layer as an optional overlay (True) or the base layer (False).
     control : bool, default True
         Whether the Layer will be included in LayerControls
@@ -466,19 +468,18 @@ class GeoJson(Layer):
         super(GeoJson, self).__init__(name=name, overlay=overlay,
                                       control=control)
         self._name = 'GeoJson'
-        if hasattr(data, 'read'):
-            self.embed = True
-            self.data = json.load(data)
-        elif isinstance(data, dict):
+        if isinstance(data, dict):
             self.embed = True
             self.data = data
         elif isinstance(data, text_type) or isinstance(data, binary_type):
-            if data.lstrip()[0] in '[{':  # This is a GeoJSON inline string
-                self.embed = True
+            self.embed = True
+            if data.lower().startswith(('http:', 'ftp:', 'https:')):
+                self.data = requests.get(data).json()
+            elif data.lstrip()[0] in '[{':  # This is a GeoJSON inline string
                 self.data = json.loads(data)
             else:  # This is a filename
-                self.embed = False
-                self.data = data
+                with open(data) as f:
+                    self.data = json.loads(f.read())
         elif data.__class__.__name__ in ['GeoDataFrame', 'GeoSeries']:
             self.embed = True
             if hasattr(data, '__geo_interface__'):
@@ -741,56 +742,6 @@ class TopoJson(Layer):
             ]
 
         ]
-
-
-class MarkerCluster(Layer):
-    """
-    Creates a MarkerCluster element to append into a map with
-    Map.add_child.
-
-    Parameters
-    ----------
-    name : string, default None
-        The name of the Layer, as it will appear in LayerControls
-    overlay : bool, default False
-        Adds the layer as an optional overlay (True) or the base layer (False).
-    control : bool, default True
-        Whether the Layer will be included in LayerControls
-
-    """
-    def __init__(self, name=None, overlay=True, control=True):
-        super(MarkerCluster, self).__init__(name=name, overlay=overlay,
-                                            control=control)
-        self._name = 'MarkerCluster'
-        self._template = Template(u"""
-            {% macro script(this, kwargs) %}
-            var {{this.get_name()}} = L.markerClusterGroup();
-            {{this._parent.get_name()}}.addLayer({{this.get_name()}});
-            {% endmacro %}
-            """)
-
-    def render(self, **kwargs):
-        """Renders the HTML representation of the element."""
-        super(MarkerCluster, self).render()
-
-        figure = self.get_root()
-        assert isinstance(figure, Figure), ('You cannot render this Element '
-                                            'if it is not in a Figure.')
-        figure.header.add_child(
-            JavascriptLink('https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.0.0/leaflet.markercluster-src.js'),  # noqa
-            name='marker_cluster_src')
-
-        figure.header.add_child(
-            JavascriptLink('https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.0.0/leaflet.markercluster.js'),  # noqa
-            name='marker_cluster')
-
-        figure.header.add_child(
-            CssLink('https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.0.0/MarkerCluster.css'),  # noqa
-            name='marker_cluster_css')
-
-        figure.header.add_child(
-            CssLink('https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.0.0/MarkerCluster.Default.css'),  # noqa
-            name='marker_cluster_default_css')
 
 
 class DivIcon(MacroElement):

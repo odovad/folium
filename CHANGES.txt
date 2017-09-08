@@ -1,5 +1,6 @@
 0.4.0
 ~~~~~
+- Optional `iconCreateFunction` for `MarkerCluster` to customize the icons (odovad #701)
 - Added `HeatMapWithTime` (Padarn #567)
 - Added `MeasureControl` (ocefpaf #669)
 - Added `VideoOverlay` plugin (ocefpaf #665)
@@ -8,12 +9,16 @@
 - Experimental support for a static png output (ocefpaf #634)
 - Added support for subdomains options in TileLayer (damselem #623)
 - Updated to leaflet 1.2.0 (ocefpaf #693)
-- Added `FastMarkerCluster` (James Gardiner #585 (proposed by @ruoyu0088))
+- Added `FastMarkerCluster` (James Gardiner #585 (proposed by ruoyu0088))
 - Use the GIS standard "pixelated" css image-rendering in
   image overlays by default (dirkvdb #684 and ocefpaf #686)
 
 API changes
 
+- Removed features `MarkerCluster` in lieu of the plugin version (ocefpaf #704)
+- `choropleth` now takes a single `geo_data` instad of `geo_path`/`geo_str`
+  leaving the parsing to `GeoJSON`, remove the unused `data_out` option,
+  add geopandas support (ocefpaf #702)
 - All popups are considered HTML text by default (ocefpaf #689)
   If a popup requires rendering use the `kwarg` `parse_html=True`.
 - `PolyLine`, `Circle` and `CircleMarker` are set to leaflet's defaults and
@@ -27,6 +32,8 @@ API changes
 
 Bug Fixes
 
+- `subdomain` option in `TileLayer` should be a list and `WmsTileLayer`
+  `overlay` default is `True` (ocefpaf #707)
 - Checking if the lat, lon locations are floats to avoid empty maps
   (radumas #626)
 
@@ -34,7 +41,7 @@ Bug Fixes
 0.3.0
 ~~~~~
 
-- Added `FastMarkerCluster` (James Gardiner #585 (proposed by @ruoyu0088))
+- Added `FastMarkerCluster` (James Gardiner #585 (proposed by ruoyu0088))
 - Added style option to 'Timestamped geojson' plugin (soymsk #627)
 - Switched to `leaflet 1.0.1` (juoceano #531 and ocefpaf #535)
 - Added `continuous_world`, `world_copy_jump`, and `no_wrap` options
@@ -140,7 +147,7 @@ Bug Fixes
 
 0.1.3
 ~~~~~
-- Bootstrap glyphicon marker icons.  @birdage
+- Bootstrap glyphicon marker icons.  birdage
 - Cluster marker group, and simple markers . (birdage 801d91c)
 - WMS tile. (birdage 26f9668)
 - Expanded color support to 253 with colorbrewer. (Adam Pah 3ba39ae)
@@ -155,7 +162,7 @@ Bug Fixes
 
 - Vincent popups take padding into account. (Kyle Corbitt 26556fe)
 - Simple popups correctly escape internal quotes. (Kyle Corbitt 20c979f)
-- Add encoding specification.  @jmduke
+- Add encoding specification.  jmduke
 - Reverted change to mathchColor. (Roy Keyes 70d7f5c)
 - Changed no-data fill to null/no-fill, rather than #fff. (Rob Story 6ff80a6)
 - Fixed issue with counties TopoJSON. (Rob Story cddaab3)
